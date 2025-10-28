@@ -1,0 +1,9 @@
+server:
+  port: 8081
+
+mfds:
+  api:
+    base-url: https://apis.data.go.kr/1471000/DrbEasyDrugInfoService
+    service-key: ${MFDS_SERVICE_KEY:}   # 환경변수로 주입(권장). 없으면 빈값.
+    connect-timeout-ms: 5000
+    read-timeout-ms: 5000

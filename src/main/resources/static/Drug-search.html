@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>e약은요 검색</title>
+    <style>
+        :root{
+          --bg:#0b0f14; --card:#121826; --ink:#eef2f7; --muted:#9aa5b1; --line:rgba(255,255,255,.08);
+          --accent:#58c4ff; --accent2:#7af2c3; --danger:#ff9ea3;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Noto Sans; background:var(--bg); color:var(--ink)}
+        .wrap{max-width:1000px;margin:0 auto;padding:20px}
+        h1{font-size:18px;margin:0 0 12px}
+        .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.02)); border:1px solid var(--line); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+        .panel{padding:14px}
+        .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .input,select{width:100%;padding:12px 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:var(--ink);outline:none}
+        .btn{appearance:none;border:0;border-radius:12px;padding:12px 14px;font-weight:700;cursor:pointer;color:#0a0f15;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+        .btn:disabled{opacity:.6;cursor:not-allowed}
+        .chip{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+        .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:16px}
+        @media (min-width:760px){.grid{grid-template-columns:1fr 1fr}}
+        .result{display:flex;gap:12px;padding:14px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+        .thumb{width:72px;height:72px;border-radius:10px;object-fit:cover;background:#0d1117;border:1px solid var(--line)}
+        .result h3{margin:0 0 6px 0;font-size:16px}
+        .muted{color:var(--muted)}
+        .right{margin-left:auto}
+        .toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+        .spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .error{color:var(--danger);white-space:pre-wrap}
+        a{color:var(--accent);text-decoration:none}
+        a:hover{text-decoration:underline}
+        .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>e약은요 검색</h1>
+
+    <div class="card panel" style="margin-bottom:10px">
+        <div class="row">
+            <input id="q" class="input" placeholder="약품명 (예: 아스피린, 타이레놀, 이부프로펜)" />
+            <select id="size" class="input" style="max-width:140px">
+                <option value="5">5개</option>
+                <option value="10" selected>10개</option>
+                <option value="20">20개</option>
+            </select>
+            <button id="btn" class="btn">검색</button>
+        </div>
+        <div class="toolbar">
+            <div class="row muted" style="gap:8px;flex-wrap:wrap">
+                <span>Enter 로 검색 • </span>
+                <span>ⓘ 일부 약품명은 정확도에 따라 결과가 달라질 수 있어요.</span>
+            </div>
+            <div class="row">
+                <button id="prev" class="chip" disabled>이전</button>
+                <span id="pageInfo" class="chip">1 페이지</span>
+                <button id="next" class="chip" disabled>다음</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row" style="gap:10px;margin-bottom:6px">
+        <button id="ping" class="chip">서버 체크</button>
+        <a id="raw" class="chip" href="#" target="_blank" rel="noreferrer">원문 보기</a>
+        <span id="status" class="muted"></span>
+        <span id="loading" style="display:none" class="row"><span class="spinner"></span><span class="muted">불러오는 중…</span></span>
+    </div>
+
+    <div id="results" class="grid"></div>
+    <div id="err" class="error" style="margin-top:8px"></div>
+</div>
+
+<script>
+    const qEl = document.getElementById('q');
+    const sizeEl = document.getElementById('size');
+    const btnEl = document.getElementById('btn');
+    const resultsEl = document.getElementById('results');
+    const errEl = document.getElementById('err');
+    const prevEl = document.getElementById('prev');
+    const nextEl = document.getElementById('next');
+    const pageInfoEl = document.getElementById('pageInfo');
+    const statusEl = document.getElementById('status');
+    const loadingEl = document.getElementById('loading');
+    const rawEl = document.getElementById('raw');
+    const pingEl = document.getElementById('ping');
+
+    const state = { page: 1 };
+
+    function setLoading(v){ loadingEl.style.display = v ? 'inline-flex' : 'none'; }
+    function setErr(msg){ errEl.textContent = msg || ''; }
+    function setStatus(msg){ statusEl.textContent = msg || ''; }
+
+    function snippet(t, n=180){ if(!t) return ''; const s=t.replace(/\s+/g,' ').trim(); return s.length>n? s.slice(0,n-1)+'…':s; }
+
+    function updatePager(hasNext){
+      pageInfoEl.textContent = state.page + ' 페이지';
+      prevEl.disabled = state.page<=1;
+      nextEl.disabled = !hasNext;
+    }
+
+    function buildRawLink(q,size){
+      rawEl.href = `/api/drugs/debug-raw?query=${encodeURIComponent(q)}&page=${state.page}&size=${size}`;
+    }
+
+    async function search(){
+      const q = qEl.value.trim();
+      const size = parseInt(sizeEl.value,10);
+      if(!q){ setErr('검색어를 입력하세요.'); return; }
+      setErr(''); setStatus(''); setLoading(true); resultsEl.innerHTML='';
+      buildRawLink(q,size);
+
+      try{
+        const url = `/api/drugs/search?query=${encodeURIComponent(q)}&page=${state.page}&size=${size}`;
+        const res = await fetch(url);
+        if(!res.ok){ throw new Error(`HTTP ${res.status}: ${await res.text()}`); }
+        const data = await res.json();
+        setStatus(`${data.length}개 결과`);
+        renderResults(data);
+        updatePager(data.length>=size);
+      }catch(e){ setErr(e.message||String(e)); updatePager(false); }
+      finally{ setLoading(false); }
+    }
+
+    function renderResults(list){
+      if(!Array.isArray(list) || list.length===0){
+        resultsEl.innerHTML = '<div class="muted" style="padding:10px">결과가 없습니다.</div>';
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      for(const d of list){
+        const card = document.createElement('div');
+        card.className = 'result';
+        const img = document.createElement('img');
+        img.className = 'thumb';
+        img.alt = '제품 이미지';
+        img.src = d.itemImage || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+        img.loading = 'lazy';
+        const body = document.createElement('div');
+        body.style.flex = '1';
+        body.innerHTML = `
+          <h3>${d.itemName ?? '(이름 없음)'}</h3>
+          <div class="muted">${d.entpName ?? ''} • <span class="kbd">#${d.itemSeq ?? ''}</span></div>
+          ${d.efficacy ? `<p style="margin:8px 0 0"><strong>효능·효과</strong><br>${snippet(d.efficacy)}</p>`: ''}
+          ${d.howToUse ? `<p style="margin:8px 0 0"><strong>복용법</strong><br>${snippet(d.howToUse)}</p>`: ''}
+          <div class="row" style="justify-content:flex-end;margin-top:8px;gap:6px">
+            <button class="chip" data-copy="${d.itemSeq ?? ''}">SEQ 복사</button>
+            <a class="chip" target="_blank" rel="noreferrer" href="/api/drugs/debug-raw?query=${encodeURIComponent(d.itemName ?? '')}&page=1&size=1">원문</a>
+          </div>
+        `;
+        card.appendChild(img); card.appendChild(body); frag.appendChild(card);
+      }
+      resultsEl.appendChild(frag);
+
+      // 복사 버튼
+      resultsEl.querySelectorAll('button[data-copy]').forEach(b=>{
+        b.addEventListener('click', async (e)=>{
+          const v=e.currentTarget.getAttribute('data-copy')||'';
+          try{ await navigator.clipboard.writeText(v); e.currentTarget.textContent='복사됨!'; setTimeout(()=>e.currentTarget.textContent='SEQ 복사',1200);}catch{}
+        });
+      });
+    }
+
+    // 이벤트
+    btnEl.addEventListener('click', ()=>{ state.page=1; search(); });
+    qEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ state.page=1; search(); }});
+    prevEl.addEventListener('click', ()=>{ if(state.page>1){ state.page--; search(); }});
+    nextEl.addEventListener('click', ()=>{ state.page++; search(); });
+    pingEl.addEventListener('click', async ()=>{
+      try{ const r=await fetch('/api/drugs/ping'); setStatus(r.ok? '서버 OK':'서버 응답 '+r.status);}catch{ setStatus('서버 응답 없음'); }
+    });
+
+    // 초기 포커스
+    qEl.focus();
+</script>
+</body>
+</html>
