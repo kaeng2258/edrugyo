@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>e약은요 데모 – 홈</title>
+  <style>
+    :root{--bg:#0b0f14;--card:#121826;--ink:#eef2f7;--muted:#9aa5b1;--line:rgba(255,255,255,.08);--accent:#58c4ff;--accent2:#7af2c3}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Noto Sans;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:960px;margin:0 auto;padding:28px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+    .badge{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .hero{padding:28px}
+    h1{margin:0 0 10px;font-size:26px}
+    p{margin:6px 0;color:var(--muted);line-height:1.6}
+    .btn{display:inline-block;margin-top:14px;padding:12px 16px;border-radius:12px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0a0f15;font-weight:700;text-decoration:none}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+    @media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
+    .tile{padding:16px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
+    .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .kbd{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;padding:2px 6px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+    .status{margin-left:auto}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="row">
+      <span class="badge">e약은요 데모</span>
+    </div>
+    <div class="row">
+      <button id="ping" class="badge">서버 체크</button>
+      <span id="status" class="muted"></span>
+    </div>
+  </header>
+
+  <section class="card hero">
+    <h1>의약품 간편 검색</h1>
+    <p>공공데이터포털(e약은요) API를 이용해 의약품명을 검색하고, 효능·효과와 복용법을 빠르게 확인합니다.</p>
+    <a class="btn" href="/drug-search.html">검색 페이지로 이동</a>
+  </section>
+
+  <section class="grid">
+    <div class="tile">
+      <h3 style="margin:0 0 6px">바로 테스트</h3>
+      <p class="muted">아래 링크를 클릭해 아스피린으로 검색을 시작해보세요.</p>
+      <a class="badge" href="/api/drugs/search?query=%EC%95%84%EC%8A%A4%ED%94%BC%EB%A6%B0&page=1&size=5" target="_blank" rel="noreferrer">/api/drugs/search?query=아스피린</a>
+    </div>
+    <div class="tile">
+      <h3 style="margin:0 0 6px">원문 응답 보기</h3>
+      <p class="muted">e약은요 API의 원문(JSON)을 그대로 확인할 수 있습니다.</p>
+      <a class="badge" href="/api/drugs/debug-raw?query=%EC%95%84%EC%8A%A4%ED%94%BC%EB%A6%B0&page=1&size=5" target="_blank" rel="noreferrer">/api/drugs/debug-raw?query=아스피린</a>
+    </div>
+  </section>
+</div>
+
+<script>
+  const pingBtn=document.getElementById('ping');
+  const statusEl=document.getElementById('status');
+  pingBtn.addEventListener('click', async ()=>{
+    try{ const r=await fetch('/api/drugs/ping'); statusEl.textContent=r.ok? '서버 OK':'서버 '+r.status; }
+    catch{ statusEl.textContent='서버 응답 없음'; }
+  });
+</script>
+</body>
+</html>

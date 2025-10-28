@@ -1,0 +1,40 @@
+{
+  "groups": [
+    {
+      "name": "mfds.api",
+      "type": "com.example.mfds.MfdsProperties",
+      "sourceType": "com.example.mfds.MfdsProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "mfds.api.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.example.mfds.MfdsProperties"
+    },
+    {
+      "name": "mfds.api.connect-timeout-ms",
+      "type": "java.lang.Integer",
+      "sourceType": "com.example.mfds.MfdsProperties"
+    },
+    {
+      "name": "mfds.api.read-timeout-ms",
+      "type": "java.lang.Integer",
+      "sourceType": "com.example.mfds.MfdsProperties"
+    },
+    {
+      "name": "mfds.api.service-key",
+      "type": "java.lang.String",
+      "sourceType": "com.example.mfds.MfdsProperties"
+    },
+    {
+      "name": "mfds.api.service-key-encoded",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.example.mfds.MfdsProperties"
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}
